@@ -3,8 +3,10 @@ import { EventsController } from './events.controller';
 import { AttendanceController } from './attendance.controller';
 import { ReviewsController } from './reviews.controller';
 import { EventsService } from './events.service';
+import { FilecoinModule } from '../filecoin/filecoin.module';
 
 @Module({
+  imports: [FilecoinModule],
   controllers: [EventsController, AttendanceController, ReviewsController],
   providers: [EventsService],
 })
