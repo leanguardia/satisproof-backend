@@ -1,0 +1,26 @@
+# Cloud Run Deployment Configuration
+# Deploy with: gcloud run deploy satisproof-backend --source .
+
+# Service configuration
+service: satisproof-backend
+region: us-central1
+
+# Container configuration
+container:
+  port: 8080
+  
+# Resource limits
+resources:
+  limits:
+    cpu: 1
+    memory: 512Mi
+  
+# Scaling configuration
+scaling:
+  minInstances: 0
+  maxInstances: 10
+
+# Environment variables
+env:
+  - name: NODE_ENV
+    value: production
