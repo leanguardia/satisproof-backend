@@ -1,11 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateEventDto } from './dto/create-event.dto';
 import { RegisterAttendanceDto } from './dto/register-attendance.dto';
+import { SubmitReviewDto } from './dto/submit-review.dto';
 
 @Injectable()
 export class EventsService {
   private events: any[] = [];
   private attendances: any[] = [];
+  private reviews: any[] = [];
 
   create(createEventDto: CreateEventDto) {
     const generatedEventId = Date.now().toString();
@@ -39,6 +41,25 @@ export class EventsService {
     return {
       message: 'Attendance registered successfully',
       attendance,
+    };
+  }
+
+  submitReview(submitReviewDto: SubmitReviewDto) {
+    const { eventId, userAddress, reviews } = submitReviewDto;
+    
+    // Guardar la review
+    const review = {
+      eventId,
+      userAddress,
+      reviews,
+      timestamp: new Date().toISOString(),
+    };
+    
+    this.reviews.push(review);
+    
+    return {
+      message: 'Review submitted successfully',
+      review,
     };
   }
 }
