@@ -1,6 +1,4 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Synapse, RPC_URLS, TOKENS, TIME_CONSTANTS } from '@filoz/synapse-sdk';
-import { ethers } from 'ethers';
 import { ConfigService } from '@nestjs/config';
 
 export interface AnonymousReview {
@@ -24,7 +22,9 @@ export interface ReviewStorageResult {
 @Injectable()
 export class FilecoinStorageService implements OnModuleInit {
   private readonly logger = new Logger(FilecoinStorageService.name);
-  private synapse: Synapse | null = null;
+  private synapse: any = null;
+  private ethers: any = null;
+  private RPC_URLS: any = null;
   private isInitialized = false;
 
   constructor(private configService: ConfigService) {}
@@ -41,7 +41,7 @@ export class FilecoinStorageService implements OnModuleInit {
   }
 
   /**
-   * Inicializa el Synapse SDK
+   * Inicializa el Synapse SDK (carga dinámica para ESM)
    */
   private async initialize(): Promise<void> {
     if (this.isInitialized) {
@@ -49,23 +49,40 @@ export class FilecoinStorageService implements OnModuleInit {
     }
 
     const privateKey = this.configService.get<string>('FILECOIN_PRIVATE_KEY');
-    const rpcUrl =
-      this.configService.get<string>('FILECOIN_RPC_URL') ||
-      RPC_URLS.calibration.http;
-
+    
     if (!privateKey) {
       throw new Error('FILECOIN_PRIVATE_KEY no configurada');
     }
 
-    this.logger.log('Inicializando Synapse SDK para Filecoin...');
+    this.logger.log('Cargando Synapse SDK y Ethers...');
 
-    this.synapse = await Synapse.create({
-      privateKey,
-      rpcURL: rpcUrl,
-    });
+    try {
+      // Importación dinámica de módulos ESM
+      const [synapseModule, ethersModule] = await Promise.all([
+        import('@filoz/synapse-sdk'),
+        import('ethers'),
+      ]);
 
-    this.isInitialized = true;
-    this.logger.log('✅ Synapse SDK inicializado correctamente');
+      this.ethers = ethersModule;
+      this.RPC_URLS = synapseModule.RPC_URLS;
+
+      const rpcUrl =
+        this.configService.get<string>('FILECOIN_RPC_URL') ||
+        this.RPC_URLS.calibration.http;
+
+      this.logger.log('Inicializando Synapse SDK para Filecoin...');
+
+      this.synapse = await synapseModule.Synapse.create({
+        privateKey,
+        rpcURL: rpcUrl,
+      });
+
+      this.isInitialized = true;
+      this.logger.log('✅ Synapse SDK inicializado correctamente');
+    } catch (error) {
+      this.logger.error(`Error al cargar módulos: ${error.message}`);
+      throw error;
+    }
   }
 
   /**
@@ -73,7 +90,7 @@ export class FilecoinStorageService implements OnModuleInit {
    */
   private createAnonymousHash(userAddress: string, eventId: string): string {
     const data = `${userAddress.toLowerCase()}-${eventId}-${Date.now()}`;
-    return ethers.keccak256(ethers.toUtf8Bytes(data));
+    return this.ethers.keccak256(this.ethers.toUtf8Bytes(data));
   }
 
   /**
